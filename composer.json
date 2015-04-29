@@ -1,5 +1,5 @@
 {
-    "name": "ck/File_MARC_Reference",
+    "name": "ck/file_marc_reference",
     "type": "library",
     "description": "MARCspec adapter for File_MARC",
     "keywords": [ "MARCspec", "MARC 21" ],
