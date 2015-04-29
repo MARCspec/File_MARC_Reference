@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #File_MARC_Reference
 
 File_MARC_Reference is an extension to the famous MARC parser for PHP [File_MARC](http://pear.php.net/package/File_MARC). With File_MARC_Reference you can use [MARCspec](http://marcspec.github.io/MARCspec) as an unified way to access MARC data. Besides it simplifies File_MARC a lot. 
@@ -134,3 +135,6 @@ Now the same task with File_MARC_Reference:
     }
 ```
     
+=======
+# File_MARC_Reference
+>>>>>>> c8f4420018ee8da515f46d66512c8a466fa2677e
