@@ -89,7 +89,7 @@ print get_class($subfield);               // File_MARC_Subfield
 
 Let's see how we check dependencies with File_MARC if you have a task like: Reference to content of subfield "a" of field 306 if character with index position "0" of field 007 is either "m", "s" or "v".
 
-Instead of writing:
+Instead of writing ...
 
 ```php
 $fields_007 = $record->getFields('007');
@@ -119,7 +119,7 @@ if($subfields_a)
 
 ```
 
-Now the same task with File_MARC_Reference:
+ ... the same task with File_MARC_Reference:
 
 ```php
 
@@ -132,5 +132,11 @@ Now the same task with File_MARC_Reference:
             echo $subfield_a."\n";
         }
     }
-```
     
+    // interseted in field 007? No problem!
+    print get_class($reference->cache['007'][0]);       // File_MARC_Control_Field
+    print $reference->cache['007/0'][0];                // prints the first char of first 007 field
+    print $reference->cache['007/0'][1];                // prints the first char of second 007 field
+```
+
+
