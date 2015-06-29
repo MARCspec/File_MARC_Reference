@@ -15,7 +15,7 @@
         "url": "http://pear.php.net"
     }],
     "require": {
-        "ck/php-marcspec": "dev-master"
+        "ck/php-marcspec": "@dev"
     },
     "require-dev": {
         "pear-pear.php.net/File_MARC": "*",
