@@ -27,5 +27,8 @@
         "pear-pear.php.net/File_MARC": "*",
         "pear-pear.php.net/validate_ispn": "*",
         "pear/pear_exception": "1.0.0"
+    },
+    "autoload": {
+        "classmap": ["src/"]
     }
 }
