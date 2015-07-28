@@ -4,33 +4,31 @@ File_MARC_Reference is an extension to the famous MARC parser for PHP [File_MARC
 
 # Installation
 
-Installation can be done by using [composer](https://getcomposer.org/doc/00-intro.md).
+Installation can be done by using [Composer](https://getcomposer.org/doc/00-intro.md). Just run
 
-Create a composer.json file with the content
+    composer require ck/File_MARC_Reference dev-master
+
+in the root of your project to install File_MARC_Reference and [php-marc-spec](https://github.com/MARCspec/php-marc-spec).
+
+If you haven't already installed File_MARC, you can modify the `composer.json` file created by Composer to
+look something like this:
 
 ```json
 {
+    "repositories": [{
+        "type": "pear",
+        "url": "http://pear.php.net"
+    }],
     "require": {
-        "ck/File_MARC_Reference": "dev-master"
+        "ck/File_MARC_Reference": "dev-master",
+        "pear-pear.php.net/File_MARC": "*",
+        "pear-pear.php.net/validate_ispn": "*",
+        "pear/pear_exception": "1.0.0"
     }
 }
 ```
 
-in the root of your project. And install File_MARC_Reference via command line: *composer install*
-
-Along with File_MARC_Reference the following libraries will be installed:
-
-- [File_MARC](http://pear.php.net/package/File_MARC) (require-dev)
-- [Validate_ISPN](http://pear.php.net/package/Validate_ISPN) (require-dev)
-- [PEAR_Exception](http://pear.php.net/package/PEAR_Exception) (require-dev)
-- [php-marc-spec](https://github.com/MARCspec/php-marc-spec) (require)
-- [phpunit](https://github.com/sebastianbergmann/phpunit) (require-dev)
-
-If you already installed File_MARC you can skip its installation with: *composer install --no-dev*. This way have to include File_MARC manually:
-
-```php
-require 'File/MARC.php';
-```
+and then run `composer update`.
 
 # Usage
 
