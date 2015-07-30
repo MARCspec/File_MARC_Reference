@@ -123,15 +123,12 @@ if($subfields_a)
 
     $reference = new File_MARC_Reference('306$a{007/0=\m|007/0=\s|007/0=\v}',$record);
     
-    if($reference->content)
+    foreach($reference->content as $subfield_a)
     {
-        foreach($reference->content as $subfield_a)
-        {
-            echo $subfield_a."\n";
-        }
+        echo $subfield_a."\n";
     }
     
-    // interseted in field 007? No problem!
+    // interested in field 007? No problem!
     print get_class($reference->cache['007'][0]);       // File_MARC_Control_Field
     print $reference->cache['007/0'][0];                // prints the first char of first 007 field
     print $reference->cache['007/0'][1];                // prints the first char of second 007 field

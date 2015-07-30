@@ -1,9 +1,4 @@
 <?php
-
-//namespace CK\File_MARC_Reference;
-
-//use CK\MARCspec\MARCspec;
-
 class File_MARC_Reference
 {
     /**
@@ -42,9 +37,9 @@ class File_MARC_Reference
     public $data = false;
     
     /**
-     * @var string|bool Data content referred
+     * @var array Data content referred
      */ 
-    public $content = false;
+    public $content = [];
     
     /**
      * Constructor
@@ -167,7 +162,6 @@ class File_MARC_Reference
                 $this->cacheControl($this->currentSpec->__toString(),$this->content);
             }
             
-            
         } // field subspecs valid
     }
     
@@ -191,14 +185,7 @@ class File_MARC_Reference
             
             if(!$leftSubTermRefrerence->data) return false; // see 2.3.4 SubSpec validation
 
-            if(is_string($leftSubTermRefrerence->content))
-            {
-                $leftSubTerm[] = $leftSubTermRefrerence->content;
-            }
-            else
-            {
-                $leftSubTerm = $leftSubTermRefrerence->content;
-            }
+            $leftSubTerm = $leftSubTermRefrerence->content; // content maybe an empty array
         }
         else // is a CK\MARCspec\ComparisonStringInterface
         {
@@ -213,16 +200,8 @@ class File_MARC_Reference
             {
                 $this->cache[$key] = $value;
             }
-            #$this->cache = array_merge_recursive($this->cache,$rightSubTermRefrerence->cache);
-            
-            if(!$rightSubTermRefrerence->content || is_string($rightSubTermRefrerence->content))
-            {
-                $rightSubTerm[] = $rightSubTermRefrerence->content;
-            }
-            else
-            {
-                $rightSubTerm = $rightSubTermRefrerence->content;
-            }
+
+            $rightSubTerm = $rightSubTermRefrerence->content; // content maybe an empty array
         }
         else // is a CK\MARCspec\ComparisonStringInterface
         {
@@ -254,7 +233,6 @@ class File_MARC_Reference
                             function($v1,$v2)
                             {
                                 if (strpos($v1,$v2) !== false) return 0;
-                                
                                 return -1;
                             }
                         )
@@ -274,7 +252,6 @@ class File_MARC_Reference
                             function($v1,$v2)
                             {
                                 if (strpos($v1,$v2) === false) return 0;
-                                
                                 return -1;
                             }
                         )
@@ -286,26 +263,11 @@ class File_MARC_Reference
                 break;
             
             case '?': 
-                if(is_array($rightSubTerm))
-                {
-                    if($rightSubTerm[0]) $validation = true;
-                }
-                elseif($rightSubTerm)
-                {
-                    $validation = true;
-                }
-                
+                if($rightSubTerm) $validation = true;
                 break;
             
             case '!':
-                if(is_array($rightSubTerm))
-                {
-                    if(!$rightSubTerm[0]) $validation = true;
-                }
-                elseif(!$rightSubTerm)
-                {
-                    $validation = true;
-                }
+                if(!$rightSubTerm) $validation = true;
                 break;
         }
 
@@ -321,7 +283,6 @@ class File_MARC_Reference
     {
         $tag = $this->currentSpec['tag'];
         
-        //if(array_key_exists($tag,$this->cache)) return $this->cache[$tag];
         if($this->cacheControl($tag)) return $this->cache[$tag];
 
         if('LDR' !== $tag)
@@ -333,7 +294,6 @@ class File_MARC_Reference
             $_fieldRef[] = $this->record->getLeader();
         }
         
-        #$this->cache[$tag] = $_fieldRef;
         $this->cacheControl($tag,$_fieldRef);
         return $_fieldRef;
     }
@@ -421,7 +381,6 @@ class File_MARC_Reference
         {
             $currentSpec = $this->spec['field']->__toString().'$'.$this->currentSpec['tag'];
             
-            //if(array_key_exists($currentSpec,$this->cache)) return $this->cache[$currentSpec];
             if($this->cacheControl($currentSpec)) return $this->cache[$currentSpec];
             
             $_subfields = array();
@@ -455,8 +414,7 @@ class File_MARC_Reference
         {
             $_subfieldRef = $_subfieldCollection;
         }
-
-        #$this->cache[$currentSpec] = $_subfieldRef;
+        
         $this->cacheControl($currentSpec,$_subfieldRef);
         
         return $_subfieldRef;

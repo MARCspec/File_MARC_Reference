@@ -142,7 +142,7 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         $this->assertSame("The Modern Jazz Quartet :", $Reference->content[0]);
         
         $Reference = new File_MARC_Reference('245$a[0]{!\foo}',$this->record);
-        $this->assertNull($Reference->content[0]);
+        $this->assertSame([],$Reference->content);
     }
 
     public function testSubSpecsExists()
@@ -160,7 +160,7 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
     public function testSubSpecsRepeated()
     {
         $Reference = new File_MARC_Reference('245$a[0]{050$a}{050$f}',$this->record);
-        $this->assertNull($Reference->content[0]);
+        $this->assertSame([],$Reference->content);
         
         $Reference = new File_MARC_Reference('245$a[0]{050$a}{050$b}',$this->record);
         $this->assertSame("The Modern Jazz Quartet :", $Reference->content[0]);
