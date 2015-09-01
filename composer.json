@@ -21,7 +21,8 @@
         "pear-pear.php.net/File_MARC": "*",
         "pear-pear.php.net/validate_ispn": "*",
         "pear/pear_exception": "1.0.0",
-        "phpunit/phpunit": "4.5.*"
+        "phpunit/phpunit": "4.5.*",
+        "satooshi/php-coveralls": "dev-master"
     },
     "suggest": {
         "pear-pear.php.net/File_MARC": "Actually it's required by this package, but check if it's already installed",
