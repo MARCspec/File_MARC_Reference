@@ -27,6 +27,11 @@ class File_MARC_Reference
     private $baseSpec;
     
     /**
+    *  @var string The original base fieldspec as string
+    */
+    private $baseSpecOriginal;
+    
+    /**
     *  @var string The base subfieldspec as string
     */
     private $baseSubfieldSpec;
@@ -63,11 +68,8 @@ class File_MARC_Reference
      * @param File_MARC_Record $record The MARC record
      * @param array[fieldPosition => index] Array of field positions 
      */ 
-    function __construct($spec, \File_MARC_Record $record, $cache = ['spec'=>[],'data'=>[],'content'=>[],'validation'=>[]])
+    function __construct($spec, \File_MARC_Record $record, $cache = ['spec'=>[],'content'=>[],'validation'=>[]])
     {
-        print "\nNEW SPEC ".$spec." with cache\n";
-        var_dump($cache);
-        
         $this->record = $record;
         
         $this->cache = $cache;
@@ -83,31 +85,23 @@ class File_MARC_Reference
                 $this->spec = new CK\MARCspec\MARCspec($spec);
                 $this->cache['spec'][$this->spec->__toString()] = $this->spec;
             }
-            
-            
         }
         elseif($spec instanceOf CK\MARCspec\MARCspecInterface)
         {
             $this->spec = $spec;
-
             $spec = $spec->__toString();
         }
         
         if(array_key_exists($spec,$this->cache))
         {
-        print "\n __construct spec $spec exists in cache\n";
-         var_dump($cache);
             $this->data = $this->cache[$spec];
             $this->content = $this->cache['content'][$spec];
         }
         else
         {
             $this->interpreteSpec();
-            print "\nWRITING CACHE B $spec\n";
             $this->cache[$spec] = $this->data;
             $this->cache['content'][$spec] = $this->content;
-            print "\nEND of spec $spec with cache\n";
-            var_dump($this->cache);
         }
     }
 
@@ -121,8 +115,7 @@ class File_MARC_Reference
         $this->referenceFields();
         
         if(!$this->fields) return;
-#print "\nCache after referenceFields\n";
-#var_dump($this->cache);
+
         foreach($this->fields as $fieldIndex => $this->field)
         {
             // adjust spec to current field repetition
@@ -163,8 +156,7 @@ class File_MARC_Reference
                         }
                     }
                 }
-                #print "\nfor $this->spec['field'] validation:\n";
-                #var_dump($valid);
+
                 if(!$valid) continue; // field subspec must be valid
             }
 
@@ -175,7 +167,6 @@ class File_MARC_Reference
                     foreach($this->spec['subfields'] as $this->currentSubfieldSpec)
                     {
                         $this->baseSubfieldSpec = $this->baseSpec.$this->currentSubfieldSpec->getBaseSpec();
-           print "\nbefore Subfield currentSpec:".$this->baseSubfieldSpec."\n";
 
                         if($_subfields = $this->referenceSubfields())
                         {
@@ -184,7 +175,6 @@ class File_MARC_Reference
                                 $this->currentSubfieldSpec->setIndexStartEnd($subfieldIndex,$subfieldIndex);
                                 
                                 $this->baseSubfieldSpec = $this->baseSpec.$this->currentSubfieldSpec->getBaseSpec();
-         print "\nafter Subfield currentSpec:".$this->baseSubfieldSpec." with fieldIndex $fieldIndex of total ".count($_subfields)." Subfields\n";
                                 
                                 $this->currentSpec = $this->currentSubfieldSpec;
                                 $contents = [$this->getContents($subfield)];
@@ -224,13 +214,12 @@ class File_MARC_Reference
                                     
                                     if(!$valid) continue; // subfield subSpecs must be valid
                                 }
-                                print "\nWRITING CACHE A $this->baseSubfieldSpec\n";
+
                                 $this->cache[$this->baseSubfieldSpec] = $subfield;
                                 
-                                $this->setDataContent($subfield,$this->currentSubfieldSpec,"subfields");
+                                $this->setDataContent($subfield,$this->currentSubfieldSpec);
                             }
                         }
-                        
                     } // end foreach subfield spec
                 }
 
@@ -239,13 +228,10 @@ class File_MARC_Reference
             else // Only a field spec
             {
                 $this->cache[$this->baseSpec] = $this->field;
-                $this->setDataContent($this->field,$this->spec['field'],"field");
+                $this->setDataContent($this->field,$this->spec['field']);
                 
             }
         } // end foreach fields
-        #$this->cache[$this->baseSpecOriginal] = $this->fields;
-        #print "\nafter ALL DATA: \n";
-        #var_dump($this->data);
     }
     
     /**
@@ -257,12 +243,10 @@ class File_MARC_Reference
     */ 
     private function setIndexStartEnd(&$subSpec,$fieldIndex,$subfieldIndex = null)
     {
-print "\nbefore setIndexStartEnd $subSpec\n";
         foreach(['leftSubTerm','rightSubTerm'] as $side)
         {
             if(!($subSpec[$side] instanceOf CK\MARCspec\ComparisonStringInterface))
             {
-            print "\n".$this->spec['field']['tag']." =?= ".$subSpec[$side]['field']['tag']."\n";
                 // only set new index if subspec field tag equals spec field tag
                 if($this->spec['field']['tag'] == $subSpec[$side]['field']['tag']) 
                 {
@@ -281,7 +265,6 @@ print "\nbefore setIndexStartEnd $subSpec\n";
                 }
             }
         }
-print "\nafter setIndexStartEnd $subSpec\n";
     }
     
     /**
@@ -294,11 +277,8 @@ print "\nafter setIndexStartEnd $subSpec\n";
     private function checkSubSpec(CK\MARCspec\SubSpecInterface $subSpec)
     {
         $this->baseSubSpec = "{".$subSpec->__toString()."}";
-print "\nvalidation subspec $this->baseSubSpec\n";
         if(array_key_exists($this->baseSubSpec,$this->cache['validation']))
         {
-        print "\nvalidation subspec $this->baseSubSpec from cache with value\n";
-        var_dump($this->cache['validation'][$this->baseSubSpec]);
             return $this->cache['validation'][$this->baseSubSpec];
         }
         
@@ -313,9 +293,6 @@ print "\nvalidation subspec $this->baseSubSpec\n";
      */ 
     private function validateSubSpec(CK\MARCspec\SubSpecInterface $subSpec)
     {
-     print "\n in validateSubSpec $subSpec\n";
-        
-
         if("!" != $subSpec['operator'] && "?" != $subSpec['operator']) // skip left subTerm on operators ! and ?
         {
         
@@ -327,7 +304,6 @@ print "\nvalidation subspec $this->baseSubSpec\n";
 
                 if(!$leftSubTermReference->content) // see 2.3.4 SubSpec validation
                 {
-                print "\n subspec $subSpec is FALSE (left no content)\n";
                     return $this->cache['validation'][$this->baseSubSpec] = false;
                 }
                 
@@ -358,7 +334,6 @@ print "\nvalidation subspec $this->baseSubSpec\n";
         switch($subSpec['operator'])
         {
             case '=':
-            var_dump($leftSubTerm);
                 if(0 < count(array_intersect($leftSubTerm,$rightSubTerm)))
                 {
                     $this->cache['validation'][$this->baseSubSpec] = true;
@@ -424,8 +399,6 @@ print "\nvalidation subspec $this->baseSubSpec\n";
                 }
                 break;
         }
-print "\nRETURN FROM SUBSPEC: $subSpec to".$this->baseSpec. " with validation result\n";
-var_dump($this->cache['validation'][$this->baseSubSpec]);
         return $this->cache['validation'][$this->baseSubSpec];
     }
     
@@ -457,7 +430,7 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
     /**
      * Reference fields. Filter by index and indicator
      * 
-     * @return array $_fieldRef Array of referenced fields
+     * @return array Array of referenced fields
      */
     private function referenceFields()
     {
@@ -499,7 +472,6 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
                             continue;
                         }
                     }
-                    
                 }
                 else // control field have no indicators
                 {
@@ -513,7 +485,7 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
     /**
      * Reference subfield contents and filter by index
      * 
-     * @return array $_subfieldRef An array of referenced subfields
+     * @return array An array of referenced subfields
      */
     private function referenceSubfields()
     {
@@ -526,7 +498,6 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
 
         if(!$_subfields)
         {
-                print "\nWRITING CACHE D $this->baseSubfieldSpec\n";
             $this->cache[$this->baseSubfieldSpec] = [];
             return [];
         }
@@ -545,10 +516,8 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
         
         if($_subfields)
         {
-                print "\nWRITING CACHE E $this->baseSubfieldSpec\n";
             return $this->cache[$this->baseSubfieldSpec] = array_values($_subfields);
         }
-        print "\nWRITING CACHE F $this->baseSubfieldSpec\n";
         $this->cache[$this->baseSubfieldSpec] = [];
         return [];
     }
@@ -583,23 +552,14 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
      * @param File_MARC_Field|File_MARC_Subfield|array[File_MARC_Field|File_MARC_Subfield] $data The data to add
      * @param CK\MARCspec\FieldInterface|CK\MARCspec\SubfieldInterface $spec The corresponding spec 
      */
-    private function setDataContent($data,$spec,$by)
+    private function setDataContent($data,$spec)
     {
-        print "\nsetDataContent GOT\n";
-        var_dump($data);
         if(!$data) return;
         
         $this->currentSpec = $spec;
         
         array_push($this->data,$data);
         array_push($this->content,$this->getContents($data));
-        
-        print "\nsetDataContent DATA by $by\n";
-        var_dump($this->data);
-        
-        print "\nsetDataContent Content\n";
-        var_dump($this->content);
-        print "\n\n\n";
     }
     
     /**
@@ -629,8 +589,6 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
      */ 
     private function getSubstring($content)
     {
-    print "\ngetSubstring got $content\n";
-        
         if($this->currentSpec->offsetExists('charStart'))
         {
             $charStart = $this->currentSpec['charStart'];
@@ -644,9 +602,7 @@ var_dump($this->cache['validation'][$this->baseSubSpec]);
             }
 
             $content = substr($content,$charStart,$length);
-
         }
-print "\ngetSubstring return $content\n";
         return $content;
     }
 }
