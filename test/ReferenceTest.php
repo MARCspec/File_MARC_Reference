@@ -164,6 +164,9 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         
         $Reference = new File_MARC_Reference('245$a[0]{!\foo}',$this->record);
         $this->assertSame([],$Reference->content);
+        
+        $Reference = new File_MARC_Reference('650$v{!~\Ex}',$this->record);
+        $this->assertSame("Scores.",$Reference->content[0]);
     }
 
     public function testSubSpecsExists()
