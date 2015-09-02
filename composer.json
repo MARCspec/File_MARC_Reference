@@ -11,7 +11,8 @@
         }
     ],
     "require": {
-        "ck/php-marcspec": "@dev"
+        "ck/php-marcspec": "@dev",
+        "php": ">=5.4.0"
     },
     "require-dev": {
         "pear/file_marc": "^1.1",
