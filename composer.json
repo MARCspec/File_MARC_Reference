@@ -10,24 +10,16 @@
             "role": "Developer"
         }
     ],
-    "repositories": [{
-        "type": "pear",
-        "url": "http://pear.php.net"
-    }],
     "require": {
         "ck/php-marcspec": "@dev"
     },
     "require-dev": {
-        "pear-pear.php.net/File_MARC": "*",
-        "pear-pear.php.net/validate_ispn": "*",
-        "pear/pear_exception": "1.0.0",
+        "pear/file_marc": "^1.1",
         "phpunit/phpunit": "4.5.*",
         "satooshi/php-coveralls": "dev-master"
     },
     "suggest": {
-        "pear-pear.php.net/File_MARC": "Actually it's required by this package, but check if it's already installed",
-        "pear-pear.php.net/validate_ispn": "It's required by File_MARC, but check if it's already installed",
-        "pear/pear_exception": "It's required by File_MARC, but check if it's already installed"
+        "pear/file_marc": "Actually it's required by this package, but check if it's already installed via pear"
     },
     "autoload": {
         "classmap": ["src/"]
