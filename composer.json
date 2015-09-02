@@ -15,7 +15,7 @@
     },
     "require-dev": {
         "pear/file_marc": "^1.1",
-        "phpunit/phpunit": "4.5.*",
+        "phpunit/phpunit": "^4.8",
         "satooshi/php-coveralls": "dev-master"
     },
     "suggest": {
