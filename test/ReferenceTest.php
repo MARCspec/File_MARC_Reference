@@ -16,11 +16,14 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
     
     protected function setUp()
     {
-        // Retrieve a set of MARC records from a file
-        $records = new \File_MARC('test/music.mrc');
-        
-        // Iterate through the retrieved records
-        $this->record = $records->next();
+        if(false === ($this->record instanceof \File_MARC_Record))
+        {
+            // Retrieve a set of MARC records from a file
+            $records = new \File_MARC('test/music.mrc');
+            
+            // Iterate through the retrieved records
+            $this->record = $records->next();
+        }
     }
 
     public function testInstanciateFile_MARC_Record()
