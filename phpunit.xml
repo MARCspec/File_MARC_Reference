@@ -24,4 +24,7 @@ bootstrap="test/autoload.php"
             </exclude>
         </whitelist>
     </filter>
+    <logging>
+        <log type="coverage-text" target="php://stdout" showUncoveredFiles="true" />
+    </logging>
 </phpunit>
