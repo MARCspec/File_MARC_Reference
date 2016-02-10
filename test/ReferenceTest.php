@@ -5,11 +5,12 @@
 * For the full copyright and license information, please view the LICENSE
 * file that was distributed with this source code.
 */
-//namespace CK\File_MARC_Reference\Test;
 
-//use CK\File_MARC_Reference\File_MARC_Reference;
 use CK\MARCspec\MARCspec;
 
+/**
+* @covers File_MARC_Reference
+*/ 
 class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
 {
     protected $record;
@@ -184,7 +185,7 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('Jazz.', $Reference->content[0]);
 
         $Reference = new File_MARC_Reference('650[0]$a{?260$c}{260$c}', $this->record);
-        #$this->assertSame("Jazz.", $Reference->content[0]);
+        $this->assertSame("Jazz.", $Reference->content[0]);
     }
 
     public function testSubSpecsNotExists()
@@ -278,10 +279,7 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         $newControl2 = new File_MARC_Control_Field('007', 'vf#caahos');
         $this->record->appendField($newControl1);
         $this->record->appendField($newControl2);
-        #print $this->record->__toString();
         $reference = new File_MARC_Reference('306$a{007/0=\m|007/0=\s|007/0=\v}', $this->record);
-        #$reference = new File_MARC_Reference('306$a{260[0]$a-c/0=\M}',$this->record);
-        #$reference = new File_MARC_Reference('260[0]$a-c',$this->record);
         $this->assertSame('003100', $reference->content[0]);
         $this->assertSame('001839', $reference->content[1]);
     }
