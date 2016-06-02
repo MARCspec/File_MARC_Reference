@@ -418,7 +418,20 @@ class File_MARC_Reference
 
         /* filter on indizes */
         if ($_indexRange = $this->getIndexRange($this->spec['field'], count($this->fields))) {
-            $this->fields = array_intersect_key($this->fields, array_flip($_indexRange));
+            $prevTag = "";
+            $index = 0;
+            foreach($this->fields as $position => $field) {
+                if(false == ($field instanceof File_MARC_Field)) {
+                    continue;
+                }
+                $tag = $field->getTag();
+                $index = ($prevTag == $tag or "" == $prevTag) ? $index : 0;
+                if(!in_array($index, $_indexRange)) {
+                    unset($this->fields[$position]);
+                }
+                $index++;
+                $prevTag = $tag;
+            }
         }
 
         /* filter on indicators */

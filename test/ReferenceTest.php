@@ -79,6 +79,12 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue(17 == $Reference->data[0]->getPosition());
         $this->assertTrue(18 == $Reference->data[1]->getPosition());
     }
+    
+    public function testGetRepeatableWildcard()
+    {
+        $Reference = new File_MARC_Reference('0..[1]', $this->record);
+        $this->assertSame(1, count($Reference->data));
+    }
 
     public function testGetRepeatableWildCardSubstring()
     {
