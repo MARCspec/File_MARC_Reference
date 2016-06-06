@@ -80,6 +80,37 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue(18 == $Reference->data[1]->getPosition());
     }
     
+    public function testGetRepeatableReverse()
+    {
+        $Reference = new File_MARC_Reference('700[#-1]', $this->record);
+        $this->assertInstanceOf('File_MARC_Data_Field', $Reference->data[0]);
+        $this->assertSame(2, count($Reference->data));
+        $this->assertTrue(17 == $Reference->data[0]->getPosition());
+        $this->assertTrue(18 == $Reference->data[1]->getPosition());
+    }
+    
+    public function testGetRepeatableReverse2()
+    {
+        $Reference = new File_MARC_Reference('700[#-0]', $this->record);
+        $this->assertInstanceOf('File_MARC_Data_Field', $Reference->data[0]);
+        $this->assertSame(1, count($Reference->data));
+        $this->assertTrue(18 == $Reference->data[0]->getPosition());
+    }
+    
+    public function testGetRepeatableReverse3()
+    {
+        $Reference = new File_MARC_Reference('700[#-#]', $this->record);
+        $this->assertInstanceOf('File_MARC_Data_Field', $Reference->data[0]);
+        $this->assertSame(1, count($Reference->data));
+        $this->assertTrue(18 == $Reference->data[0]->getPosition());
+    }
+    
+    public function testGetRepeatableReverse4()
+    {
+        $Reference = new File_MARC_Reference('700[3-3]', $this->record);
+        $this->assertFalse(array_key_exists(0,$Reference->data));
+    }
+    
     public function testGetRepeatableWildcard()
     {
         $Reference = new File_MARC_Reference('0..[1]', $this->record);

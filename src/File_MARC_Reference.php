@@ -509,18 +509,26 @@ class File_MARC_Reference
     private function getIndexRange($spec, $total)
     {
         $lastIndex = $total - 1;
-
-        if ($lastIndex < $spec['indexStart']) {
-            return [$spec['indexStart']]; // this will result to no hits
+        $indexStart = $spec['indexStart'];
+        $indexEnd = $spec['indexEnd'];
+        if('#' === $indexStart) {
+            if('#' === $indexEnd or 0 === $indexEnd) {
+                return [$lastIndex];
+            }
+            $indexStart = $lastIndex;
+            $indexEnd = $lastIndex - $indexEnd;
+            $indexEnd = (0 > $indexEnd) ? 0 : $indexEnd;
+        } else {
+            if ($lastIndex < $indexStart) {
+                return [$indexStart]; // this will result to no hits
+            }
+            
+            $indexEnd = ('#' === $indexEnd) ? $lastIndex : $indexEnd;
+            if ($indexEnd > $lastIndex) {
+                $indexEnd = $lastIndex;
+            }
         }
-
-        $indexEnd = ('#' === $spec['indexEnd']) ? $lastIndex : $spec['indexEnd'];
-
-        if ($indexEnd > $lastIndex) {
-            $indexEnd = $lastIndex;
-        }
-
-        return range($spec['indexStart'], $indexEnd);
+        return range($indexStart, $indexEnd);
     }
 
     /**
