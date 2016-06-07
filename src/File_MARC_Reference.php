@@ -324,7 +324,6 @@ class File_MARC_Reference
                             $leftSubTerm,
                             $rightSubTerm,
                             function ($v1, $v2) {
-
                                 if (strpos($v1, $v2) !== false) {
                                     return 0;
                                 }
@@ -345,7 +344,6 @@ class File_MARC_Reference
                             $leftSubTerm,
                             $rightSubTerm,
                             function ($v1, $v2) {
-
                                 if (strpos($v1, $v2) === false) {
                                     return 0;
                                 }
@@ -418,15 +416,15 @@ class File_MARC_Reference
 
         /* filter on indizes */
         if ($_indexRange = $this->getIndexRange($this->spec['field'], count($this->fields))) {
-            $prevTag = "";
+            $prevTag = '';
             $index = 0;
-            foreach($this->fields as $position => $field) {
-                if(false == ($field instanceof File_MARC_Field)) {
+            foreach ($this->fields as $position => $field) {
+                if (false == ($field instanceof File_MARC_Field)) {
                     continue;
                 }
                 $tag = $field->getTag();
-                $index = ($prevTag == $tag or "" == $prevTag) ? $index : 0;
-                if(!in_array($index, $_indexRange)) {
+                $index = ($prevTag == $tag or '' == $prevTag) ? $index : 0;
+                if (!in_array($index, $_indexRange)) {
                     unset($this->fields[$position]);
                 }
                 $index++;
@@ -511,8 +509,8 @@ class File_MARC_Reference
         $lastIndex = $total - 1;
         $indexStart = $spec['indexStart'];
         $indexEnd = $spec['indexEnd'];
-        if('#' === $indexStart) {
-            if('#' === $indexEnd or 0 === $indexEnd) {
+        if ('#' === $indexStart) {
+            if ('#' === $indexEnd or 0 === $indexEnd) {
                 return [$lastIndex];
             }
             $indexStart = $lastIndex;
@@ -522,12 +520,13 @@ class File_MARC_Reference
             if ($lastIndex < $indexStart) {
                 return [$indexStart]; // this will result to no hits
             }
-            
+
             $indexEnd = ('#' === $indexEnd) ? $lastIndex : $indexEnd;
             if ($indexEnd > $lastIndex) {
                 $indexEnd = $lastIndex;
             }
         }
+
         return range($indexStart, $indexEnd);
     }
 
