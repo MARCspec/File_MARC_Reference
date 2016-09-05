@@ -13,88 +13,70 @@ class File_MARC_Reference
     protected $spec;
 
     /**
-     * @var File_MARC_Field The current field spec
+     * @var File_MARC_Field The current field
      */
     private $field;
 
     /**
-     *  @var int The current field index
-     */
-    private $index;
-
-    /**
-     *  @var string The base fieldspec as string
+     *  @var string The base field spec as string
      */
     private $baseSpec;
 
     /**
-     *  @var string The original base fieldspec as string
+     *  @var FieldInterface The current field spec
      */
-    private $baseSpecOriginal;
+    private $currentFieldSpec;
 
     /**
-     *  @var string The base subfieldspec as string
+     *  @var SubfieldInterface The current subfield spec
      */
-    private $baseSubfieldSpec;
+    private $currentSubfieldSpec;
 
     /**
-     * @var string The current spec processed
+     *  @var SubSpecInterface The current subspec
      */
-    private $currentSpec;
+    private $currentSubSpec;
 
     /**
-     * @var array of fields
+     * @var array[File_MARC_Field] Array of fields
      */
     private $fields = [];
 
     /**
-     * @var array Associative array cache of referred data
+     * @var File_MARC_Reference_Cache Instance of cached data
      */
-    public $cache;
-
+    protected $cache;
+    
     /**
-     * @var array[File_MARC_Field|File_MARC_Subfield] Data referred
+     * @var array[FieldInterface|SubfieldInterface] Array of referenced data
      */
-    public $data = [];
-
+    protected $data = [];
+    
     /**
-     * @var array Data content referred
+     * @var array[string] Array of referenced data content
      */
-    public $content = [];
+    protected $content = [];
 
     /**
      * Constructor.
      *
      * @param string|MARCspecInterface $spec   The MARCspec
      * @param File_MARC_Record         $record The MARC record
-     * @param array[fieldPosition => index] Array of field positions
+     * @param array                    $cache  Associative array of chache data
      */
-    public function __construct($spec, \File_MARC_Record $record, $cache = ['spec' => [], 'content' => [], 'validation' => []])
+    public function __construct($spec, File_MARC_Record $record, $cache = null)
     {
         $this->record = $record;
 
-        $this->cache = $cache;
-
-        if (is_string($spec)) {
-            if (array_key_exists($spec, $this->cache['spec'])) {
-                $this->spec = $this->cache['spec'][$spec];
-            } else {
-                $this->spec = new CK\MARCspec\MARCspec($spec);
-                $this->cache['spec'][$this->spec->__toString()] = $this->spec;
-            }
-        } elseif ($spec instanceof CK\MARCspec\MARCspecInterface) {
-            $this->spec = $spec;
-            $spec = $spec->__toString();
-        }
-
-        if (array_key_exists($spec, $this->cache)) {
-            $this->data = $this->cache[$spec];
-            $this->content = $this->cache['content'][$spec];
+        if($cache instanceof File_MARC_Reference_Cache) {
+            $this->cache = $cache;
         } else {
-            $this->interpreteSpec();
-            $this->cache[$spec] = $this->data;
-            $this->cache['content'][$spec] = $this->content;
+            $this->cache = new File_MARC_Reference_Cache;
         }
+        
+        $this->spec = $this->cache->spec($spec);
+
+        $this->interpreteSpec();
     }
 
     /**
@@ -103,131 +85,123 @@ class File_MARC_Reference
     private function interpreteSpec()
     {
         $this->baseSpec = $this->spec['field']->getBaseSpec();
-        $this->baseSpecOriginal = $this->baseSpec;
         $this->referenceFields();
 
         if (!$this->fields) {
             return;
         }
-
-        foreach ($this->fields as $fieldIndex => $this->field) {
-            // adjust spec to current field repetition
-            $this->spec['field']->setIndexStartEnd($fieldIndex, $fieldIndex);
-
-            $this->baseSpec = $this->spec['field']->getBaseSpec();
-
-            // content cache is always wanted
-            $this->currentSpec = $this->spec['field'];
-            $contents = $this->getContents($this->field);
-            $this->cache['content'] = array_merge($this->cache['content'], [$this->baseSpec => $contents]);
-
-            if ($this->spec['field']->offsetExists('subSpecs')) {
-                $valid = true;
-
-                foreach ($this->spec['field']['subSpecs'] as $_subSpec) { // AND
-                    if (is_array($_subSpec)) { // OR
-                        foreach ($_subSpec as $subSpec) {
-                            $this->setIndexStartEnd($subSpec, $fieldIndex);
-
-                            if ($valid = $this->checkSubSpec($subSpec)) {
-                                break; // at least one of them is true (OR)
-                            }
-                        }
-                    } else {
-                        $this->setIndexStartEnd($_subSpec, $fieldIndex);
-
-                        if (!$valid = $this->checkSubSpec($_subSpec)) {
-                            break; // all of them have to be true (AND)
-                        }
-                    }
-                }
-
+        $fieldIndex = $this->spec['field']->getIndexStart();
+        $prevTag = '';
+        $this->currentFieldSpec = clone $this->spec['field'];
+        foreach ($this->fields as $this->field) {
+            if ($this->field instanceof File_MARC_Field) { // not for leader
+                // adjust spec to current field repetition
+                $tag = $this->field->getTag();
+                $fieldIndex = ($prevTag == $tag or '' == $prevTag) ? $fieldIndex : $this->spec['field']->getIndexStart();
+                $this->currentFieldSpec->setIndexStartEnd($fieldIndex, $fieldIndex);
+                $this->baseSpec = $this->currentFieldSpec->getBaseSpec();
+            } else {
+                $tag = 'LDR';
+            }
+            /**
+             *  Field SubSpec validation
+             */
+            if ($this->currentFieldSpec->offsetExists('subSpecs')) {
+                $valid = $this->iterateSubSpec($this->currentFieldSpec['subSpecs'], $fieldIndex);
                 if (!$valid) {
+                    $fieldIndex++;
+                    $prevTag = $tag;
                     continue; // field subspec must be valid
                 }
             }
-
+            /**
+             *  Subfield iteration
+             */
             if ($this->spec->offsetExists('subfields')) {
                 if ($this->field instanceof File_MARC_Data_Field) {
-                    foreach ($this->spec['subfields'] as $this->currentSubfieldSpec) {
-                        $this->baseSubfieldSpec = $this->baseSpec.$this->currentSubfieldSpec->getBaseSpec();
-
-                        if ($_subfields = $this->referenceSubfields()) {
+                    foreach ($this->spec['subfields'] as $currentSubfieldSpec) {
+                        if ($_subfields = $this->referenceSubfields($currentSubfieldSpec)) {
                             foreach ($_subfields as $subfieldIndex => $subfield) {
-                                $this->currentSubfieldSpec->setIndexStartEnd($subfieldIndex, $subfieldIndex);
+                                $currentSubfieldSpec->setIndexStartEnd($subfieldIndex, $subfieldIndex);
+                                /**
+                                *  Subfield SubSpec validation
+                                */
+                                if ($currentSubfieldSpec->offsetExists('subSpecs')) {
+                                    $valid = $this->iterateSubSpec(
+                                        $currentSubfieldSpec['subSpecs'],
+                                        $fieldIndex,
+                                        $subfieldIndex
+                                    );
 
-                                $this->baseSubfieldSpec = $this->baseSpec.$this->currentSubfieldSpec->getBaseSpec();
-
-                                $this->currentSpec = $this->currentSubfieldSpec;
-                                $contents = [$this->getContents($subfield)];
-                                $this->cache['content'] = array_merge(
-                                    $this->cache['content'],
-                                    [$this->baseSubfieldSpec => $contents]
-                                );
-
-                                // SubSpec Validation
-                                if ($this->currentSubfieldSpec->offsetExists('subSpecs')) {
-                                    $valid = true;
-
-                                    foreach ($this->currentSubfieldSpec['subSpecs'] as $_subSpec) {
-                                        if (is_array($_subSpec)) { // chained subSpecs (OR)
-                                            foreach ($_subSpec as $subSpec) {
-                                                $this->setIndexStartEnd($subSpec, $fieldIndex, $subfieldIndex);
-
-                                                if ($valid = $this->checkSubSpec($subSpec)) {
-                                                    break; // at least one of them is true (OR)
-                                                }
-                                            }
-                                        } else {
-                                            // repeated SubSpecs (AND)
-
-                                            $this->setIndexStartEnd($_subSpec, $fieldIndex, $subfieldIndex);
-
-                                            if (!$valid = $this->checkSubSpec($_subSpec)) {
-                                                break; // all of them have to be true (AND)
-                                            }
-                                        }
+                                    if ($valid) {
+                                        $this->ref($currentSubfieldSpec, $subfield);
                                     }
-
-                                    if (!$valid) {
-                                        continue; // subfield subSpecs must be valid
-                                    }
+                                } else {
+                                    $this->ref($currentSubfieldSpec, $subfield);
                                 }
-
-                                $this->cache[$this->baseSubfieldSpec] = $subfield;
-
-                                $this->setDataContent($subfield, $this->currentSubfieldSpec);
                             }
                         }
                     } // end foreach subfield spec
                 }
             } else {
                 // Only a field spec
-
-                $this->cache[$this->baseSpec] = $this->field;
-                $this->setDataContent($this->field, $this->spec['field']);
+                $this->ref($this->currentFieldSpec, $this->field);
             }
+            $fieldIndex++;
+            $prevTag = $tag;
         } // end foreach fields
+    }
+    
+    /**
+    * Iterate on subspecs
+    * 
+    * @param array $subSpecs      Array of subspecs
+    * @param int   $fieldIndex    The current field index
+    * @param int   $subfieldIndex The current subfield index
+    * 
+    * @return bool     The validation result
+    */ 
+    private function iterateSubSpec($subSpecs, $fieldIndex, $subfieldIndex = null)
+    {
+        $valid = true;
+        foreach ($subSpecs as $_subSpec) {
+            if (is_array($_subSpec)) { // chained subSpecs (OR)
+                foreach ($_subSpec as $this->currentSubSpec) {
+                    $this->setIndexStartEnd($fieldIndex, $subfieldIndex);
+                    if ($valid = $this->checkSubSpec()) {
+                        break; // at least one of them is true (OR)
+                    }
+                }
+            } else {
+                // repeated SubSpecs (AND)
+                $this->currentSubSpec = $_subSpec;
+                $this->setIndexStartEnd($fieldIndex, $subfieldIndex);
+                if (!$valid = $this->checkSubSpec()) {
+                    break; // all of them have to be true (AND)
+                }
+            }
+        }
+        return $valid;
     }
 
     /**
      * Sets the start and end index of the current spec
      * if it's an instance of CK\MARCspec\PositionOrRangeInterface.
      *
-     * @param object $spec  The current spec
-     * @param int    $index the start/end index to set
+     * @param object $spec          The current spec
+     * @param int    $fieldIndex    the start/end index to set
+     * @param int    $subfieldIndex the start/end index to set
      */
-    private function setIndexStartEnd(&$subSpec, $fieldIndex, $subfieldIndex = null)
+    private function setIndexStartEnd($fieldIndex, $subfieldIndex = null)
     {
         foreach (['leftSubTerm', 'rightSubTerm'] as $side) {
-            if (!($subSpec[$side] instanceof CK\MARCspec\ComparisonStringInterface)) {
-                // only set new index if subspec field tag equals spec field tag
-                if ($this->spec['field']['tag'] == $subSpec[$side]['field']['tag']) {
-                    $subSpec[$side]['field']->setIndexStartEnd($fieldIndex, $fieldIndex);
-
+            if (!($this->currentSubSpec[$side] instanceof CK\MARCspec\ComparisonStringInterface)) {
+                // only set new index if subspec field tag equals spec field tag!!
+                if ($this->spec['field']['tag'] == $this->currentSubSpec[$side]['field']['tag']) {
+                    $this->currentSubSpec[$side]['field']->setIndexStartEnd($fieldIndex, $fieldIndex);
                     if (!is_null($subfieldIndex)) {
-                        if ($subSpec[$side]->offsetExists('subfields')) {
-                            foreach ($subSpec[$side]['subfields'] as $subfieldSpec) {
+                        if ($this->currentSubSpec[$side]->offsetExists('subfields')) {
+                            foreach ($this->currentSubSpec[$side]['subfields'] as $subfieldSpec) {
                                 $subfieldSpec->setIndexStartEnd($subfieldIndex, $subfieldIndex);
                             }
                         }
@@ -241,136 +215,117 @@ class File_MARC_Reference
      * Checks cache for subspec validation result.
      * Validates SubSpec if it's not in cache.
      *
-     * @param CK\MARCspec\SubSpecInterface $subSpec The subSpec to be validated
-     *
      * @return bool Validation result
      */
-    private function checkSubSpec(CK\MARCspec\SubSpecInterface $subSpec)
+    private function checkSubSpec()
     {
-        $this->baseSubSpec = '{'.$subSpec->__toString().'}';
-        if (array_key_exists($this->baseSubSpec, $this->cache['validation'])) {
-            return $this->cache['validation'][$this->baseSubSpec];
+        $validation = $this->cache->validation($this->currentSubSpec);
+        if(!is_null($validation)) {
+            return $validation;
         }
-
-        return $this->validateSubSpec($subSpec);
+        return $this->validateSubSpec();
     }
 
     /**
      * Validates a subSpec.
      *
-     * @param CK\MARCspec\SubSpecInterface $subSpec The subSpec to be validated
-     *
      * @return bool True if subSpec is valid and false if not
      */
-    private function validateSubSpec(CK\MARCspec\SubSpecInterface $subSpec)
+    private function validateSubSpec()
     {
-        if ('!' != $subSpec['operator'] && '?' != $subSpec['operator']) { // skip left subTerm on operators ! and ?
-            if (false === ($subSpec['leftSubTerm'] instanceof CK\MARCspec\ComparisonStringInterface)) {
+        if ('!' != $this->currentSubSpec['operator'] && '?' != $this->currentSubSpec['operator']) { // skip left subTerm on operators ! and ?
+            if (false === ($this->currentSubSpec['leftSubTerm'] instanceof CK\MARCspec\ComparisonStringInterface)) {
                 $leftSubTermReference = new self(
-                    $subSpec['leftSubTerm']->__toString(),
+                    $this->currentSubSpec['leftSubTerm'],
                     $this->record,
                     $this->cache
                 );
-
-                $this->cache = array_replace($this->cache, $leftSubTermReference->cache);
-
-                if (!$leftSubTermReference->content) { // see 2.3.4 SubSpec validation
-                    return $this->cache['validation'][$this->baseSubSpec] = false;
+                if(!$leftSubTerm = $leftSubTermReference->content) { // see 2.3.4 SubSpec validation
+                    return $this->cache->validation($this->currentSubSpec, false);
                 }
-
-                $leftSubTerm = $leftSubTermReference->content; // content maybe an empty array
             } else {
                 // is a CK\MARCspec\ComparisonStringInterface
-
-                $leftSubTerm[] = $subSpec['leftSubTerm']['comparable'];
+                $leftSubTerm[] = $this->currentSubSpec['leftSubTerm']['comparable'];
             }
         }
 
-        if (false === ($subSpec['rightSubTerm'] instanceof CK\MARCspec\ComparisonStringInterface)) {
+        if (false === ($this->currentSubSpec['rightSubTerm'] instanceof CK\MARCspec\ComparisonStringInterface)) {
             $rightSubTermReference = new self(
-                $subSpec['rightSubTerm']->__toString(),
+                $this->currentSubSpec['rightSubTerm'],
                 $this->record,
                 $this->cache
             );
-
-            $this->cache = array_replace($this->cache, $rightSubTermReference->cache);
-
             $rightSubTerm = $rightSubTermReference->content; // content maybe an empty array
         } else {
             // is a CK\MARCspec\ComparisonStringInterface
+            $rightSubTerm[] = $this->currentSubSpec['rightSubTerm']['comparable'];
+        }
+        $validation = false;
 
-            $rightSubTerm[] = $subSpec['rightSubTerm']['comparable'];
+        switch ($this->currentSubSpec['operator']) {
+        case '=':
+            if (0 < count(array_intersect($leftSubTerm, $rightSubTerm))) {
+                $validation = true;
+            }
+            break;
+
+        case '!=':
+            if (0 < count(array_diff($leftSubTerm, $rightSubTerm))) {
+                $validation = true;
+            }
+            break;
+
+        case '~':
+            if (0 <                count(
+                array_uintersect(
+                    $leftSubTerm,
+                    $rightSubTerm,
+                    function ($v1, $v2) {
+                        if (strpos($v1, $v2) !== false) {
+                            return 0;
+                        }
+                            return -1;
+                    }
+                )
+            )
+            ) {
+                $validation = true;
+            }
+            break;
+
+        case '!~':
+            if (0 <                count(
+                array_uintersect(
+                    $leftSubTerm,
+                    $rightSubTerm,
+                    function ($v1, $v2) {
+                        if (strpos($v1, $v2) === false) {
+                            return 0;
+                        }
+                            return -1;
+                    }
+                )
+            )
+            ) {
+                $validation = true;
+            }
+            break;
+
+        case '?':
+            if ($rightSubTerm) {
+                $validation = true;
+            }
+            break;
+
+        case '!':
+            if (!$rightSubTerm) {
+                $validation = true;
+            }
+            break;
         }
 
-        $this->cache['validation'][$this->baseSubSpec] = false;
-
-        switch ($subSpec['operator']) {
-            case '=':
-                if (0 < count(array_intersect($leftSubTerm, $rightSubTerm))) {
-                    $this->cache['validation'][$this->baseSubSpec] = true;
-                }
-                break;
-
-            case '!=':
-                if (0 < count(array_diff($leftSubTerm, $rightSubTerm))) {
-                    $this->cache['validation'][$this->baseSubSpec] = true;
-                }
-                break;
-
-            case '~':
-                if (0 <
-                    count(
-                        array_uintersect(
-                            $leftSubTerm,
-                            $rightSubTerm,
-                            function ($v1, $v2) {
-                                if (strpos($v1, $v2) !== false) {
-                                    return 0;
-                                }
-
-                                return -1;
-                            }
-                        )
-                    )
-                ) {
-                    $this->cache['validation'][$this->baseSubSpec] = true;
-                }
-                break;
-
-            case '!~':
-                if (0 <
-                    count(
-                        array_uintersect(
-                            $leftSubTerm,
-                            $rightSubTerm,
-                            function ($v1, $v2) {
-                                if (strpos($v1, $v2) === false) {
-                                    return 0;
-                                }
-
-                                return -1;
-                            }
-                        )
-                    )
-                ) {
-                    $this->cache['validation'][$this->baseSubSpec] = true;
-                }
-                break;
-
-            case '?':
-                if ($rightSubTerm) {
-                    $this->cache['validation'][$this->baseSubSpec] = true;
-                }
-                break;
-
-            case '!':
-                if (!$rightSubTerm) {
-                    $this->cache['validation'][$this->baseSubSpec] = true;
-                }
-                break;
-        }
-
-        return $this->cache['validation'][$this->baseSubSpec];
+        $this->cache->validation($this->currentSubSpec, $validation);
+        return $validation;
     }
 
     /**
@@ -382,7 +337,7 @@ class File_MARC_Reference
     {
         $tag = $this->spec['field']['tag'];
 
-        if (array_key_exists($tag, $this->cache)) {
+        if ($this->cache->offsetExists($tag)) {
             return $this->cache[$tag];
         }
 
@@ -390,7 +345,6 @@ class File_MARC_Reference
             $_fieldRef = $this->record->getFields($tag, true);
         } else {
             // tag = LDR
-
             $_fieldRef[] = $this->record->getLeader();
         }
 
@@ -406,15 +360,17 @@ class File_MARC_Reference
      */
     private function referenceFields()
     {
-        if (array_key_exists($this->baseSpec, $this->cache)) {
-            return $this->fields = $this->cache[$this->baseSpec];
+        if($this->fields = $this->cache->getData($this->spec['field'])) {
+            return $this->fields;
         }
 
         if (!$this->fields = $this->referenceFieldsByTag()) {
             return;
         }
 
-        /* filter on indizes */
+        /**
+        * filter by indizes
+        */
         if ($_indexRange = $this->getIndexRange($this->spec['field'], count($this->fields))) {
             $prevTag = '';
             $index = 0;
@@ -432,7 +388,9 @@ class File_MARC_Reference
             }
         }
 
-        /* filter on indicators */
+        /**
+        * filter by indicators
+        */
         if ($this->spec['field']->offsetExists('indicator1') || $this->spec['field']->offsetExists('indicator2')) {
             foreach ($this->fields as $key => $field) {
                 // only filter by indicators for data fields
@@ -452,7 +410,6 @@ class File_MARC_Reference
                     }
                 } else {
                     // control field have no indicators
-
                     unset($this->fields[$key]);
                     continue;
                 }
@@ -462,25 +419,28 @@ class File_MARC_Reference
 
     /**
      * Reference subfield contents and filter by index.
-     *
+     * 
+     * @param SubfieldInterface $currentSubfieldSpec The current subfield spec
+     * 
      * @return array An array of referenced subfields
      */
-    private function referenceSubfields()
+    private function referenceSubfields($currentSubfieldSpec)
     {
-        if (array_key_exists($this->baseSubfieldSpec, $this->cache)) {
-            return $this->cache[$this->baseSubfieldSpec];
+        $baseSubfieldSpec = $this->baseSpec.$currentSubfieldSpec->getBaseSpec();
+        
+        if ($subfields = $this->cache->getData($this->currentFieldSpec, $currentSubfieldSpec)) {
+            return $subfields;
         }
 
-        $_subfields = $this->field->getSubfields($this->currentSubfieldSpec['tag']);
+        $_subfields = $this->field->getSubfields($currentSubfieldSpec['tag']);
 
         if (!$_subfields) {
-            $this->cache[$this->baseSubfieldSpec] = [];
-
+            $this->cache[$baseSubfieldSpec] = [];
             return [];
         }
 
         /* filter on indizes */
-        if ($_indexRange = $this->getIndexRange($this->currentSubfieldSpec, count($_subfields))) {
+        if ($_indexRange = $this->getIndexRange($currentSubfieldSpec, count($_subfields))) {
             foreach ($_subfields as $sfkey => $item) {
                 if (!in_array($sfkey, $_indexRange) || $item->isEmpty()) {
                     unset($_subfields[$sfkey]);
@@ -489,10 +449,12 @@ class File_MARC_Reference
         }
 
         if ($_subfields) {
-            return $this->cache[$this->baseSubfieldSpec] = array_values($_subfields);
+            $sf_values = array_values($_subfields);
+            $this->cache[$baseSubfieldSpec] = $sf_values;
+            return $sf_values;
         }
-        $this->cache[$this->baseSubfieldSpec] = [];
-
+        
+        $this->cache[$baseSubfieldSpec] = [];
         return [];
     }
 
@@ -529,69 +491,36 @@ class File_MARC_Reference
 
         return range($indexStart, $indexEnd);
     }
-
     /**
-     * Updates $this->data and $this->content with $data.
-     *
-     * @param File_MARC_Field|File_MARC_Subfield|array[File_MARC_Field|File_MARC_Subfield] $data The data to add
-     * @param CK\MARCspec\FieldInterface|CK\MARCspec\SubfieldInterface                     $spec The corresponding spec
-     */
-    private function setDataContent($data, $spec)
+     * Reference data and set content
+     * 
+     * @param FieldInterface|SubfieldInterface          $spec  The corresponding spec
+     * @param string|File_MARC_Field|File_MARC_Subfield $value The value to reference
+     */ 
+    public function ref($spec, $value)
     {
-        if (!$data) {
-            return;
-        }
-
-        $this->currentSpec = $spec;
-
-        array_push($this->data, $data);
-        array_push($this->content, $this->getContents($data));
+        array_push($this->data, $value);
+        /**
+        * set content
+        */
+        $value = $this->cache->getContents($spec, [$value]);
+        $this->content = array_merge($this->content, $value);
     }
-
     /**
-     * Get the data content
-     * Calls getSubstring to retrieve the substrings of content data depending on current spec.
-     *
-     * @param string|File_MARC_Field|File_MARC_Subfield $data MARC data
-     *
-     * @return string Data content
-     */
-    private function getContents($data)
+    * Get protected attributes
+    */
+    public function __get($name) 
     {
-        // leader
-        if (is_string($data)) {
-            return $this->getSubstring($data);
+        switch($name) {
+        case 'data':
+            return $this->data;
+            break;
+        case 'content':
+            return $this->content;
+            break;
+        case 'cache':
+            return $this->cache;
+            break;
         }
-
-        if ($data instanceof File_MARC_Data_Field) {
-            return $this->getSubstring($data->toRaw());
-        }
-
-        return $this->getSubstring($data->getData());
-    }
-
-    /**
-     * Get the substring of data content depending on char start and length.
-     *
-     * @param string $content The data content
-     *
-     * @return string The substring of data content
-     */
-    private function getSubstring($content)
-    {
-        if ($this->currentSpec->offsetExists('charStart')) {
-            $charStart = $this->currentSpec['charStart'];
-
-            $length = $this->currentSpec['charLength'] * 1;
-
-            if ('#' === $charStart) {
-                // negative index
-                $charStart = $length * -1;
-            }
-
-            $content = substr($content, $charStart, $length);
-        }
-
-        return $content;
     }
 }
