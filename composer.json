@@ -11,10 +11,12 @@
             "role": "Developer"
         }
     ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require": {
         "ck/php-marcspec": "^1.0",
         "php": ">=5.4.0",
-        "pear/file_marc": "^1.3"
+        "pear/file_marc": "@dev"
     },
     "require-dev": {
         "phpunit/phpunit": "^4.8",
