@@ -44,7 +44,7 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
     {
         $Reference = new File_MARC_Reference('...', $this->record);
         $this->assertSame(21, count($Reference->data));
-        
+
         $Reference = new File_MARC_Reference('...[1]', $this->record);
         $this->assertSame(3, count($Reference->data));
     }

@@ -46,12 +46,12 @@ class File_MARC_Reference
      * @var File_MARC_Reference_Cache Instance of cached data
      */
     protected $cache;
-    
+
     /**
      * @var array[FieldInterface|SubfieldInterface] Array of referenced data
      */
     protected $data = [];
-    
+
     /**
      * @var array[string] Array of referenced data content
      */
@@ -68,12 +68,12 @@ class File_MARC_Reference
     {
         $this->record = $record;
 
-        if($cache instanceof File_MARC_Reference_Cache) {
+        if ($cache instanceof File_MARC_Reference_Cache) {
             $this->cache = $cache;
         } else {
-            $this->cache = new File_MARC_Reference_Cache;
+            $this->cache = new File_MARC_Reference_Cache();
         }
-        
+
         $this->spec = $this->cache->spec($spec);
 
         $this->interpreteSpec();
@@ -102,7 +102,7 @@ class File_MARC_Reference
             } else {
                 $tag = 'LDR';
             }
-            /**
+            /*
              *  Field SubSpec validation
              */
             if ($this->currentFieldSpec->offsetExists('subSpecs')) {
@@ -113,7 +113,7 @@ class File_MARC_Reference
                     continue; // field subspec must be valid
                 }
             }
-            /**
+            /*
              *  Subfield iteration
              */
             if ($this->spec->offsetExists('subfields')) {
@@ -122,7 +122,7 @@ class File_MARC_Reference
                         if ($_subfields = $this->referenceSubfields($currentSubfieldSpec)) {
                             foreach ($_subfields as $subfieldIndex => $subfield) {
                                 $currentSubfieldSpec->setIndexStartEnd($subfieldIndex, $subfieldIndex);
-                                /**
+                                /*
                                 *  Subfield SubSpec validation
                                 */
                                 if ($currentSubfieldSpec->offsetExists('subSpecs')) {
@@ -175,14 +175,14 @@ class File_MARC_Reference
     }
     
     /**
-    * Iterate on subspecs
-    * 
-    * @param array $subSpecs      Array of subspecs
-    * @param int   $fieldIndex    The current field index
-    * @param int   $subfieldIndex The current subfield index
-    * 
-    * @return bool     The validation result
-    */ 
+     * Iterate on subspecs.
+     *
+     * @param array $subSpecs      Array of subspecs
+     * @param int   $fieldIndex    The current field index
+     * @param int   $subfieldIndex The current subfield index
+     *
+     * @return bool The validation result
+     */
     private function iterateSubSpec($subSpecs, $fieldIndex, $subfieldIndex = null)
     {
         $valid = true;
@@ -203,6 +203,7 @@ class File_MARC_Reference
                 }
             }
         }
+
         return $valid;
     }
 
@@ -242,9 +243,10 @@ class File_MARC_Reference
     private function checkSubSpec()
     {
         $validation = $this->cache->validation($this->currentSubSpec);
-        if(!is_null($validation)) {
+        if (!is_null($validation)) {
             return $validation;
         }
+
         return $this->validateSubSpec();
     }
 
@@ -262,7 +264,7 @@ class File_MARC_Reference
                     $this->record,
                     $this->cache
                 );
-                if(!$leftSubTerm = $leftSubTermReference->content) { // see 2.3.4 SubSpec validation
+                if (!$leftSubTerm = $leftSubTermReference->content) { // see 2.3.4 SubSpec validation
                     return $this->cache->validation($this->currentSubSpec, false);
                 }
             } else {
@@ -306,7 +308,8 @@ class File_MARC_Reference
                         if (strpos($v1, $v2) !== false) {
                             return 0;
                         }
-                            return -1;
+
+                        return -1;
                     }
                 )
             )
@@ -324,7 +327,8 @@ class File_MARC_Reference
                         if (strpos($v1, $v2) === false) {
                             return 0;
                         }
-                            return -1;
+
+                        return -1;
                     }
                 )
             )
@@ -347,6 +351,7 @@ class File_MARC_Reference
         }
 
         $this->cache->validation($this->currentSubSpec, $validation);
+
         return $validation;
     }
 
@@ -382,7 +387,7 @@ class File_MARC_Reference
      */
     private function referenceFields()
     {
-        if($this->fields = $this->cache->getData($this->spec['field'])) {
+        if ($this->fields = $this->cache->getData($this->spec['field'])) {
             return $this->fields;
         }
 
@@ -390,7 +395,7 @@ class File_MARC_Reference
             return;
         }
 
-        /**
+        /*
         * filter by indizes
         */
         if ($_indexRange = $this->getIndexRange($this->spec['field'], count($this->fields))) {
@@ -410,7 +415,7 @@ class File_MARC_Reference
             }
         }
 
-        /**
+        /*
         * filter by indicators
         */
         if ($this->spec['field']->offsetExists('indicator1') || $this->spec['field']->offsetExists('indicator2')) {
@@ -441,15 +446,15 @@ class File_MARC_Reference
 
     /**
      * Reference subfield contents and filter by index.
-     * 
+     *
      * @param SubfieldInterface $currentSubfieldSpec The current subfield spec
-     * 
+     *
      * @return array An array of referenced subfields
      */
     private function referenceSubfields($currentSubfieldSpec)
     {
         $baseSubfieldSpec = $this->baseSpec.$currentSubfieldSpec->getBaseSpec();
-        
+
         if ($subfields = $this->cache->getData($this->currentFieldSpec, $currentSubfieldSpec)) {
             return $subfields;
         }
@@ -458,6 +463,7 @@ class File_MARC_Reference
 
         if (!$_subfields) {
             $this->cache[$baseSubfieldSpec] = [];
+
             return [];
         }
 
@@ -473,10 +479,12 @@ class File_MARC_Reference
         if ($_subfields) {
             $sf_values = array_values($_subfields);
             $this->cache[$baseSubfieldSpec] = $sf_values;
+
             return $sf_values;
         }
-        
+
         $this->cache[$baseSubfieldSpec] = [];
+
         return [];
     }
 
@@ -513,27 +521,29 @@ class File_MARC_Reference
 
         return range($indexStart, $indexEnd);
     }
+
     /**
-     * Reference data and set content
-     * 
+     * Reference data and set content.
+     *
      * @param FieldInterface|SubfieldInterface          $spec  The corresponding spec
      * @param string|File_MARC_Field|File_MARC_Subfield $value The value to reference
-     */ 
+     */
     public function ref($spec, $value)
     {
         array_push($this->data, $value);
-        /**
+        /*
         * set content
         */
         $value = $this->cache->getContents($spec, [$value]);
         $this->content = array_merge($this->content, $value);
     }
+
     /**
-    * Get protected attributes
-    */
-    public function __get($name) 
+     * Get protected attributes.
+     */
+    public function __get($name)
     {
-        switch($name) {
+        switch ($name) {
         case 'data':
             return $this->data;
             break;
