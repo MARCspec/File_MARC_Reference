@@ -7,12 +7,13 @@
 */
 
 use CK\MARCspec\MARCspec;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers File_MARC_Reference
  * @covers File_MARC_Reference_Cache
  */
-class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
+class File_MARC_ReferenceTest extends TestCase
 {
     protected $record;
 
