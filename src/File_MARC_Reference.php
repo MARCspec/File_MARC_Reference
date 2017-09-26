@@ -86,7 +86,6 @@ class File_MARC_Reference
     {
         $this->baseSpec = $this->spec['field']->getBaseSpec();
         $this->referenceFields();
-
         if (!$this->fields) {
             return;
         }
@@ -97,7 +96,7 @@ class File_MARC_Reference
             if ($this->field instanceof File_MARC_Field) { // not for leader
                 // adjust spec to current field repetition
                 $tag = $this->field->getTag();
-                $fieldIndex = ($prevTag == $tag or '' == $prevTag) ? $fieldIndex : $this->spec['field']->getIndexStart();
+                $fieldIndex = $this->getFieldIndex($prevTag, $tag, $fieldIndex);
                 $this->currentFieldSpec->setIndexStartEnd($fieldIndex, $fieldIndex);
                 $this->baseSpec = $this->currentFieldSpec->getBaseSpec();
             } else {
@@ -150,6 +149,29 @@ class File_MARC_Reference
             $fieldIndex++;
             $prevTag = $tag;
         } // end foreach fields
+    }
+
+    /**
+    * Get the current field index
+    *
+    * @param    string  $prevTag    The previous field tag
+    * @param    string  $tag        The current field tag
+    * @param    int     $fieldIndex The current field index
+    *
+    * @return   int     $fieldIndex The current field index
+    */
+    private function getFieldIndex($prevTag, $tag, $fieldIndex)
+    {
+        if($prevTag == $tag or '' == $prevTag) {
+            return $fieldIndex; // iteration of field index will continue
+        }
+        $specTag = $this->currentFieldSpec->getTag();
+        if( preg_match('/'.$specTag.'/', $tag) ) {
+            // not same field tag, but field spec tag matches
+            return $fieldIndex; # iteration of field index will continue
+        }
+        // not same field tag, iteration gets reset
+        return $this->spec['field']->getIndexStart();
     }
     
     /**

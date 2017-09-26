@@ -330,4 +330,13 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
         $Reference = new File_MARC_Reference('245$a[0]/#-3', $this->record);
         $this->assertSame('et :', $Reference->content[0]);
     }
+
+    public function testWildCardFieldWithSubspec()
+    {
+        $Reference = new File_MARC_Reference('5..{$a~\piano}', $this->record);
+        $this->assertTrue(1 == count($Reference->content));
+        
+        $Reference = new File_MARC_Reference('5..{$a~\Lewis}', $this->record);
+        $this->assertTrue(1 == count($Reference->content));
+    }
 }
