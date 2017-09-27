@@ -19,8 +19,8 @@
         "pear/file_marc": "@dev"
     },
     "require-dev": {
-        "phpunit/phpunit": "dev-master",
-        "satooshi/php-coveralls": "dev-master"
+        "phpunit/phpunit": "^4.8",
+        "satooshi/php-coveralls": "^1.0"
     },
     "autoload": {
         "classmap": ["src/"]

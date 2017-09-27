@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * @covers File_MARC_Reference_Cache
  */
-class File_MARC_Reference_CacheTest extends TestCase
+class File_MARC_Reference_CacheTest extends \PHPUnit_Framework_TestCase
 {
     protected $record;
     protected $cache;
