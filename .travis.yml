@@ -10,11 +10,11 @@ php:
  - hhvm
 
 before_script:
- - composer install --dev --no-interaction
+ - composer install --no-interaction
 
 script:
  - mkdir -p build/logs
- - phpunit -c app/ src/ --coverage-clover build/logs/clover.xml
+ - phpunit --coverage-clover build/logs/clover.xml
 
 #after_script:
 # - php vendor/bin/coveralls -v
