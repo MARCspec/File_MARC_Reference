@@ -1,4 +1,6 @@
-# File_MARC_Reference [![Build Status](https://travis-ci.org/MARCspec/File_MARC_Reference.svg)] (https://travis-ci.org/MARCspec/File_MARC_Reference) [![Coverage Status](https://coveralls.io/repos/MARCspec/File_MARC_Reference/badge.svg?branch=master&service=github)](https://coveralls.io/github/MARCspec/File_MARC_Reference?branch=master)
+# File_MARC_Reference
+
+[![Build Status](https://travis-ci.org/MARCspec/File_MARC_Reference.svg?branch=master)](https://travis-ci.org/MARCspec/File_MARC_Reference) [![Coverage Status](https://coveralls.io/repos/github/MARCspec/File_MARC_Reference/badge.svg?branch=master)](https://coveralls.io/github/MARCspec/File_MARC_Reference?branch=master)
 
 File_MARC_Reference is an extension to the famous MARC parser for PHP [File_MARC](http://pear.php.net/package/File_MARC). With File_MARC_Reference you can use [MARCspec](http://marcspec.github.io/MARCspec) as an unified way to access MARC data. Besides it simplifies File_MARC a lot. 
 
