@@ -340,7 +340,7 @@ class File_MARC_ReferenceTest extends TestCase
     {
         $Reference = new File_MARC_Reference('5..{$a~\piano}', $this->record);
         $this->assertTrue(1 == count($Reference->content));
-        
+
         $Reference = new File_MARC_Reference('5..{$a~\Lewis}', $this->record);
         $this->assertTrue(1 == count($Reference->content));
     }
