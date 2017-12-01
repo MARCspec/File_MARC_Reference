@@ -15,10 +15,13 @@ allow_failures:
   - php: hhvm
 
 before_script:
-- composer install -o -n
+  - composer install -o -n
 
 script:
+  - mkdir -p build/logs
   - vendor/bin/phpunit --testdox --coverage-clover=coverage.xml
 
 after_success:
-- bash <(curl -s https://codecov.io/bash)
+  - bash <(curl -s https://codecov.io/bash)
+  - bin/coveralls -v
+
