@@ -131,7 +131,7 @@ class File_MARC_Reference
                         }
                     } // end foreach subfield spec
                 }
-            } else if ($this->spec->offsetExists('indicator')) {
+            } elseif ($this->spec->offsetExists('indicator')) {
                 if ($this->field instanceof File_MARC_Data_Field) {
                     /*
                     *  Field SubSpec validation
@@ -144,7 +144,7 @@ class File_MARC_Reference
                             continue; // field subspec must be valid
                         }
                     }
-                    $position = (int)$this->currentSpec['indicator']['position'];
+                    $position = (int) $this->currentSpec['indicator']['position'];
                     $this->ref($this->currentSpec['indicator'], $this->field->getIndicator($position));
                 }
             } else {
@@ -159,7 +159,7 @@ class File_MARC_Reference
                         continue; // field subspec must be valid
                     }
                 }
-                
+
                 $this->ref($this->currentSpec['field'], $this->field);
             }
             $fieldIndex++;
@@ -168,28 +168,28 @@ class File_MARC_Reference
     }
 
     /**
-    * Get the current field index
-    *
-    * @param    string  $prevTag    The previous field tag
-    * @param    string  $tag        The current field tag
-    * @param    int     $fieldIndex The current field index
-    *
-    * @return   int     $fieldIndex The current field index
-    */
+     * Get the current field index.
+     *
+     * @param string $prevTag    The previous field tag
+     * @param string $tag        The current field tag
+     * @param int    $fieldIndex The current field index
+     *
+     * @return int $fieldIndex The current field index
+     */
     private function getFieldIndex($prevTag, $tag, $fieldIndex)
     {
-        if($prevTag == $tag or '' == $prevTag) {
+        if ($prevTag == $tag or '' == $prevTag) {
             return $fieldIndex; // iteration of field index will continue
         }
         $specTag = $this->currentSpec['field']->getTag();
-        if( preg_match('/'.$specTag.'/', $tag) ) {
+        if (preg_match('/'.$specTag.'/', $tag)) {
             // not same field tag, but field spec tag matches
-            return $fieldIndex; # iteration of field index will continue
+            return $fieldIndex; // iteration of field index will continue
         }
         // not same field tag, iteration gets reset
         return $this->spec['field']->getIndexStart();
     }
-    
+
     /**
      * Iterate on subspecs.
      *
@@ -316,7 +316,7 @@ class File_MARC_Reference
             break;
 
         case '~':
-            if (0 <                count(
+            if (0 < count(
                 array_uintersect(
                     $leftSubTerm,
                     $rightSubTerm,
@@ -335,7 +335,7 @@ class File_MARC_Reference
             break;
 
         case '!~':
-            if (0 <                count(
+            if (0 < count(
                 array_uintersect(
                     $leftSubTerm,
                     $rightSubTerm,
