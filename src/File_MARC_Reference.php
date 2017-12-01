@@ -23,9 +23,9 @@ class File_MARC_Reference
     private $baseSpec;
 
     /**
-     *  @var FieldInterface The current field spec
+     *  @var MARCspecInterface The current marc spec
      */
-    private $currentFieldSpec;
+    private $currentSpec;
 
     /**
      *  @var SubfieldInterface The current subfield spec
@@ -91,27 +91,16 @@ class File_MARC_Reference
         }
         $fieldIndex = $this->spec['field']->getIndexStart();
         $prevTag = '';
-        $this->currentFieldSpec = clone $this->spec['field'];
+        $this->currentSpec = clone $this->spec;
         foreach ($this->fields as $this->field) {
             if ($this->field instanceof File_MARC_Field) { // not for leader
                 // adjust spec to current field repetition
                 $tag = $this->field->getTag();
                 $fieldIndex = $this->getFieldIndex($prevTag, $tag, $fieldIndex);
-                $this->currentFieldSpec->setIndexStartEnd($fieldIndex, $fieldIndex);
-                $this->baseSpec = $this->currentFieldSpec->getBaseSpec();
+                $this->currentSpec['field']->setIndexStartEnd($fieldIndex, $fieldIndex);
+                $this->baseSpec = $this->currentSpec['field']->getBaseSpec();
             } else {
                 $tag = 'LDR';
-            }
-            /*
-             *  Field SubSpec validation
-             */
-            if ($this->currentFieldSpec->offsetExists('subSpecs')) {
-                $valid = $this->iterateSubSpec($this->currentFieldSpec['subSpecs'], $fieldIndex);
-                if (!$valid) {
-                    $fieldIndex++;
-                    $prevTag = $tag;
-                    continue; // field subspec must be valid
-                }
             }
             /*
              *  Subfield iteration
@@ -142,9 +131,36 @@ class File_MARC_Reference
                         }
                     } // end foreach subfield spec
                 }
+            } else if ($this->spec->offsetExists('indicator')) {
+                if ($this->field instanceof File_MARC_Data_Field) {
+                    /*
+                    *  Field SubSpec validation
+                    */
+                    if ($this->currentSpec['indicator']->offsetExists('subSpecs')) {
+                        $valid = $this->iterateSubSpec($this->currentSpec['indicator']['subSpecs'], $fieldIndex);
+                        if (!$valid) {
+                            $fieldIndex++;
+                            $prevTag = $tag;
+                            continue; // field subspec must be valid
+                        }
+                    }
+                    $position = (int)$this->currentSpec['indicator']['position'];
+                    $this->ref($this->currentSpec['indicator'], $this->field->getIndicator($position));
+                }
             } else {
-                // Only a field spec
-                $this->ref($this->currentFieldSpec, $this->field);
+                /*
+                *  Field SubSpec validation
+                */
+                if ($this->currentSpec['field']->offsetExists('subSpecs')) {
+                    $valid = $this->iterateSubSpec($this->currentSpec['field']['subSpecs'], $fieldIndex);
+                    if (!$valid) {
+                        $fieldIndex++;
+                        $prevTag = $tag;
+                        continue; // field subspec must be valid
+                    }
+                }
+                
+                $this->ref($this->currentSpec['field'], $this->field);
             }
             $fieldIndex++;
             $prevTag = $tag;
@@ -165,7 +181,7 @@ class File_MARC_Reference
         if($prevTag == $tag or '' == $prevTag) {
             return $fieldIndex; // iteration of field index will continue
         }
-        $specTag = $this->currentFieldSpec->getTag();
+        $specTag = $this->currentSpec['field']->getTag();
         if( preg_match('/'.$specTag.'/', $tag) ) {
             // not same field tag, but field spec tag matches
             return $fieldIndex; # iteration of field index will continue
@@ -416,29 +432,14 @@ class File_MARC_Reference
         }
 
         /*
-        * filter by indicators
+        * filter for indicator values
         */
-        if ($this->spec['field']->offsetExists('indicator1') || $this->spec['field']->offsetExists('indicator2')) {
+        if ($this->spec->offsetExists('indicator')) {
             foreach ($this->fields as $key => $field) {
                 // only filter by indicators for data fields
-                if ($field->isDataField()) {
-                    if ($this->spec['field']->offsetExists('indicator1')) {
-                        if ($field->getIndicator(1) != $this->spec['field']['indicator1']) {
-                            unset($this->fields[$key]);
-                            continue;
-                        }
-                    }
-
-                    if ($this->spec['field']->offsetExists('indicator2')) {
-                        if ($field->getIndicator(2) != $this->spec['field']['indicator2']) {
-                            unset($this->fields[$key]);
-                            continue;
-                        }
-                    }
-                } else {
+                if (!$field->isDataField()) {
                     // control field have no indicators
                     unset($this->fields[$key]);
-                    continue;
                 }
             }
         }
@@ -455,7 +456,7 @@ class File_MARC_Reference
     {
         $baseSubfieldSpec = $this->baseSpec.$currentSubfieldSpec->getBaseSpec();
 
-        if ($subfields = $this->cache->getData($this->currentFieldSpec, $currentSubfieldSpec)) {
+        if ($subfields = $this->cache->getData($this->currentSpec['field'], $currentSubfieldSpec)) {
             return $subfields;
         }
 

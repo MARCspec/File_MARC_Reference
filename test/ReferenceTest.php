@@ -7,13 +7,13 @@
 */
 
 use CK\MARCspec\MARCspec;
-#use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers File_MARC_Reference
  * @covers File_MARC_Reference_Cache
  */
-class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
+class File_MARC_ReferenceTest extends TestCase
 {
     protected $record;
 
@@ -246,14 +246,18 @@ class File_MARC_ReferenceTest extends \PHPUnit_Framework_TestCase
 
     public function testIndicator()
     {
-        $Reference = new File_MARC_Reference('035_9$a{$a}', $this->record);
+        $Reference = new File_MARC_Reference('035^1', $this->record);
+        $this->assertSame(2, count($Reference->content));
+        $this->assertSame('9', $Reference->content[1]);
+
+        $Reference = new File_MARC_Reference('035^1{$a=\AAJ5802}', $this->record);
         $this->assertSame(1, count($Reference->content));
-        $this->assertSame('AAJ5802', $Reference->content[0]);
+        $this->assertSame('9', $Reference->content[0]);
 
-        $Reference = new File_MARC_Reference('700_11', $this->record);
-        $this->assertSame(0, count($Reference->content));
+        $Reference = new File_MARC_Reference('700^2', $this->record);
+        $this->assertSame('2', $Reference->content[0]);
 
-        $Reference = new File_MARC_Reference('008_11', $this->record);
+        $Reference = new File_MARC_Reference('008^1', $this->record);
         $this->assertSame(0, count($Reference->content));
     }
 
