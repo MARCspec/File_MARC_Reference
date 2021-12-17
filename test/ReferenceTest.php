@@ -16,6 +16,7 @@ use PHPUnit\Framework\TestCase;
 class File_MARC_ReferenceTest extends TestCase
 {
     protected $record;
+    protected $record2;
 
     protected function setUp()
     {
@@ -25,6 +26,14 @@ class File_MARC_ReferenceTest extends TestCase
 
             // Iterate through the retrieved records
             $this->record = $records->next();
+        }
+
+        if (false === ($this->record2 instanceof \File_MARC_Record)) {
+            // Retrieve a set of MARC records from a file
+            $records = new \File_MARC('test/example2.mrc');
+
+            // Iterate through the retrieved records
+            $this->record2 = $records->next();
         }
     }
 
@@ -147,6 +156,20 @@ class File_MARC_ReferenceTest extends TestCase
     {
         $_contents = ['Lewis, John,', 'Jackson, Milt.', 'Jackson, Milt.'];
         $Reference = new File_MARC_Reference('700$a', $this->record);
+        $this->assertSame($_contents, $Reference->content);
+    }
+
+    public function testGetRepeatedSubfieldsOfRepeatedField()
+    {
+        $_contents = [
+            '(DE-588)4067488-5',
+            '(DE-627)10454466X',
+            '(DE-576)20917000X',
+            '(DE-588)4143389-0',
+            '(DE-627)105605913',
+            '(DE-576)209725893'
+        ];
+        $Reference = new File_MARC_Reference('655$0', $this->record2);
         $this->assertSame($_contents, $Reference->content);
     }
 
