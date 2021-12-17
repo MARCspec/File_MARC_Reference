@@ -109,6 +109,7 @@ class File_MARC_Reference
                 if ($this->field instanceof File_MARC_Data_Field) {
                     foreach ($this->spec['subfields'] as $currentSubfieldSpec) {
                         if ($_subfields = $this->referenceSubfields($currentSubfieldSpec)) {
+                            $currentSubfieldSpec = clone $currentSubfieldSpec;
                             foreach ($_subfields as $subfieldIndex => $subfield) {
                                 $currentSubfieldSpec->setIndexStartEnd($subfieldIndex, $subfieldIndex);
                                 /*
